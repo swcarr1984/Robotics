@@ -4,6 +4,10 @@
 # 1 Function that writes your name and counts to favourite number squared
 
 def myFunction(name,fav_number):
+    name = name[::-1]
+    name = name.lower()
+    firstLetter = name[0].upper()
+    name = firstLetter + name[1::]
     print("My name is", name)
     count = 0
     for i in range(fav_number*fav_number):
