@@ -1,0 +1,26 @@
+Below is the correct output when the program runs.
+(Add "/std:c++17" to args within .vscode/tasks.json to allow build to ref clamp call)
+If clamp error occurs at time of build and execute, the above fix will resolve.
+
+PS C:\dev\Robotics> C:\dev\Robotics\2Axis3JointRobotEffector.exe
+199711
+199711
+199711
+iter 0  end=(1.52526, 0.50842)  err=0.0266248
+199711
+199711
+199711
+iter 1  end=(1.50485, 0.501618)  err=0.00511721
+199711
+199711
+199711
+iter 2  end=(1.50103, 0.500343)  err=0.0010851
+199711
+199711
+199711
+iter 3  end=(1.50022, 0.500074)  err=0.000234457
+
+Final joint angles (rad):
+theta0 = -0.0103357
+theta1 = 0.315151
+theta2 = 2.40269

@@ -1,0 +1,236 @@
+High‑Level Overview - Cyclic Coordinate Descent Example Program
+(Add "/std:c++17" to args within .vscode/tasks.json to allow build to ref clamp call)
+
+This program implements reverse kinematics for a 2D robot arm with 3 joints using the 
+CCD (Cyclic Coordinate Descent) algorithm.
+It repeatedly adjusts each joint so the end effector moves closer to a target point.
+
+The major components are:
+- Data structures for vectors, links, and the arm
+- Forward kinematics to compute joint positions
+- CCD solver step to rotate joints toward the target
+- Main loop that iteratively solves IK and prints progress
+
+Below is a section‑by‑section explanation you can drop directly into a tutorial.
+
+1. Data Structures
+
+Vec2 
+Represents a 2D point or vector.
+
+-------------------------------------
+struct Vec2 {
+    double x{};
+    double y{};
+};
+-------------------------------------
+Used for joint positions, target position, and direction vectors.
+
+Link
+Represents a single arm segment.
+
+-------------------------------------
+struct Link {
+    double length{};
+};
+-------------------------------------
+Each link only stores its length.
+
+Arm
+Holds the full robot arm configuration.
+-------------------------------------
+struct Arm {
+    std::array<Link, 3> links;
+    std::array<double, 3> angles;
+};
+links[i].length → length of segment i
+
+angles[i] → joint angle i in radians
+-------------------------------------
+Angles are relative, and accumulate during forward kinematics
+
+2. Forward Kinematics
+Purpose
+Compute the actual (x, y) positions of all joints and the end effector.
+
+Function
+-------------------------------------
+void forwardKinematics(const Arm& arm, std::array<Vec2, 4>& joints)
+-------------------------------------
+How it works
+Start at the base (0,0)
+Accumulate joint angles as you move down the chain
+For each link:
+Compute the next joint using cosine/sine of the cumulative angle
+Key idea
+The arm is a chain. Each joint’s position depends on all previous angles.
+
+3. CCD Step (Cyclic Coordinate Descent)
+Purpose
+Rotate each joint so the end effector moves closer to the target.
+
+Function
+-------------------------------------
+void ccdStep(Arm& arm, const Vec2& target)
+-------------------------------------
+
+Process
+Compute current joint positions using forward kinematics.
+Loop backwards from the last joint to the base.
+For each joint:
+Compute vector from joint → end effector (r1)
+Compute vector from joint → target (r2)
+Normalize both vectors
+Compute the angle between them using:
+dot product → magnitude of rotation
+cross product → sign of rotation
+Rotate the joint by that angle
+Recompute forward kinematics after each joint update.
+
+Key math
+Dot product gives angle magnitude
+Cross product gives rotation direction
+std::clamp ensures numerical stability
+std::acos converts dot product to angle
+This is the core of the IK solver.
+
+📌 4. Main Simulation Loop
+Purpose
+Iteratively apply CCD until the end effector reaches the target.
+
+Steps
+Initialize the arm with:
+3 links: 1.0, 1.0, 0.5
+All joint angles = 0
+Set a target point: (1.5, 0.5)
+Loop up to 200 iterations:
+Run one CCD step
+Compute new end effector position
+Compute error distance to target
+Print iteration info
+Stop early if error < 0.001
+
+Final output
+Prints the final joint angles in radians.
+
+5. What This Program Demonstrates
+This code is a compact example of:
+Forward kinematics
+Reverse kinematics using CCD
+Vector math (dot, cross, normalization)
+Iterative numerical solving
+Basic robotics simulation
+
+   Joint 0 (base)
+        |
+        |  Link 0 (length = arm.links[0].length)
+        |
+   Joint 1
+        \
+         \  Link 1 (length = arm.links[1].length)
+          \
+        Joint 2
+            \
+             \  Link 2 (length = arm.links[2].length)
+              \
+            Joint 3 (end effector)
+
+joints[0] → base
+joints[1] → after link 0
+joints[2] → after link 1
+joints[3] → end effector (after link 2)
+
+angles[0] → rotation at Joint 0
+angles[1] → rotation at Joint 1
+angles[2] → rotation at Joint 2
+
+Each angle is relative, but forward kinematics accumulates them:
+θ_total_0 = angles[0]
+θ_total_1 = angles[0] + angles[1]
+θ_total_2 = angles[0] + angles[1] + angles[2]
+This is what the forwardKinematics() loop does.
+
+It works by starting at the end of the arm and adjusting one joint at a time.
+
+Here’s the conceptual flow:
+
+1. Compute current joint positions
+call:
+
+---------------------------------
+forwardKinematics(arm, joints);
+---------------------------------
+
+This gives:
+
+joint 0 position
+
+joint 1 position
+
+joint 2 position
+
+joint 3 (end effector) position
+
+These are needed so CCD knows where everything currently is.
+
+2. Work backward from the last joint
+CCD loops:
+
+Code
+Joint 2 → Joint 1 → Joint 0
+At each joint, the algorithm asks:
+
+“If I rotate this joint, can I move the end effector closer to the target?”
+
+This is why CCD is good — each joint only worries about improving the situation locally.
+
+3. For each joint, compute two vectors
+At joint i:
+
+Code
+r1 = vector from joint i → end effector
+r2 = vector from joint i → target
+These represent:
+
+Where the end effector is now
+Where we want it to go
+
+4. Normalize the vectors
+This gives direction only, ignoring length.
+
+5. Compute the angle between r1 and r2
+Using:
+
+dot product → angle magnitude
+cross product → rotation direction (clockwise or counter‑clockwise)
+This gives a signed angle delta.
+
+6. Rotate the joint by delta
+---------------------------------
+arm.angles[i] += delta;
+---------------------------------
+
+This rotates the joint so the end effector swings toward the target.
+
+7. Recompute forward kinematics
+After each joint update, recompute all joint positions:
+
+---------------------------------
+forwardKinematics(arm, joints);
+---------------------------------
+This ensures the next joint works with the updated geometry.
+
+8. Repeat until close enough
+The main loop runs up to 200 iterations, but usually converges much earlier.
+
+CCD Summary
+
+Cyclic Coordinate Descent (CCD) solves inverse kinematics by adjusting one joint at a time, 
+starting from the end effector and working backward toward the base.
+For each joint, CCD computes the direction from the joint to the end effector and the direction 
+from the joint to the target.
+It then rotates the joint by the smallest angle that aligns these two directions.
+After each adjustment, forward kinematics is recomputed so the next joint works with the updated 
+arm configuration.
+This process repeats until the end effector reaches the target or a maximum iteration count is 
+reached.
